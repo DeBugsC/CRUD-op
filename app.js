@@ -1,3 +1,8 @@
+const token = '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'; // Replace with your actual token
+const repoOwner = 'AbdlrhmnAtallh'; // Owner of the repo containing the JSON file
+const repoName = 'FirstWebsiteTemplate'; // Repo containing the JSON file
+const filePath = 'products.json'; // Path to your JSON file in the repo
+
 let products = [];
 let editMode = false;
 let editId = null;
@@ -6,32 +11,54 @@ document.addEventListener('DOMContentLoaded', () => {
     loadProducts();
 });
 
-function loadProducts() {
-    // Load product data from JSON
-    fetch('products.json')
-        .then(response => response.json())
-        .then(data => {
-            products = data;
-            displayProducts();
-        })
-        .catch(error => console.error('Error loading products:', error));
+async function fetchFile() {
+    const url = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`;
+    const response = await fetch(url, {
+        headers: {
+            'Authorization': `token ${token}`,
+            'Accept': 'application/vnd.github.v3+json'
+        }
+    });
+    const data = await response.json();
+    const content = atob(data.content);
+    return JSON.parse(content);
 }
 
-function previewImage(fileInputId, previewId) {
-    const fileInput = document.getElementById(fileInputId);
-    const preview = document.getElementById(previewId);
-    const urlInputId = fileInputId.replace('imagepath', 'imageurl');
-    const urlInput = document.getElementById(urlInputId);
+async function updateFile(content) {
+    const url = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`;
+    const response = await fetch(url, {
+        headers: {
+            'Authorization': `token ${token}`,
+            'Accept': 'application/vnd.github.v3+json'
+        }
+    });
+    const data = await response.json();
+    const sha = data.sha;
 
-    if (fileInput.files && fileInput.files[0]) {
-        preview.src = URL.createObjectURL(fileInput.files[0]);
-        urlInput.value = ''; // Clear URL input
-    } else {
-        preview.src = urlInput.value;
+    await fetch(url, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `token ${token}`,
+            'Accept': 'application/vnd.github.v3+json'
+        },
+        body: JSON.stringify({
+            message: 'Updating JSON file',
+            content: btoa(JSON.stringify(content)),
+            sha: sha
+        })
+    });
+}
+
+async function loadProducts() {
+    try {
+        products = await fetchFile();
+        displayProducts();
+    } catch (error) {
+        console.error('Error loading products:', error);
     }
 }
 
-function addProduct() {
+async function addProduct() {
     const name = document.getElementById('name').value;
     const description = document.getElementById('description').value;
     const description2Text = document.getElementById('description2').value;
@@ -39,16 +66,31 @@ function addProduct() {
     const relatedproducts = document.getElementById('relatedproducts').value.split(',').map(Number);
     const price = document.getElementById('price').value;
 
-    const imagepath1 = getImagePath('imagepath1', 'imageurl1');
-    const imagepath2 = getImagePath('imagepath2', 'imageurl2');
-    const imagepath3 = getImagePath('imagepath3', 'imageurl3');
-    const imagepath4 = getImagePath('imagepath4', 'imageurl4');
-    const imagepath5 = getImagePath('imagepath5', 'imageurl5');
+    const imagepath1 = document.getElementById('imageurl1').value;
+    const imagefile1 = document.getElementById('imagepath1').files[0];
+    const imagepath2 = document.getElementById('imageurl2').value;
+    const imagefile2 = document.getElementById('imagepath2').files[0];
+    const imagepath3 = document.getElementById('imageurl3').value;
+    const imagefile3 = document.getElementById('imagepath3').files[0];
+    const imagepath4 = document.getElementById('imageurl4').value;
+    const imagefile4 = document.getElementById('imagepath4').files[0];
+    const imagepath5 = document.getElementById('imageurl5').value;
+    const imagefile5 = document.getElementById('imagepath5').files[0];
 
-    if (!name || !price || (!imagepath1 && !editMode)) {
-        alert('Name, Price, and Image Path 1 are required');
+    if (!name || !price || (!imagepath1 && !imagefile1 && !editMode)) {
+        alert('Name, Price, and at least one Image Path or File are required');
         return;
     }
+
+    const getImagePath = (url, file) => {
+        if (file) {
+            return URL.createObjectURL(file);
+        } else if (url) {
+            return url;
+        } else {
+            return '';
+        }
+    };
 
     if (editMode) {
         const product = products.find(p => p.Id === editId);
@@ -57,11 +99,11 @@ function addProduct() {
         product.Description2 = description2;
         product.relatedproducts = relatedproducts;
         product.Price = Number(price);
-        product.ImagePath1 = imagepath1 || product.ImagePath1;
-        product.ImagePath2 = imagepath2 || product.ImagePath2;
-        product.ImagePath3 = imagepath3 || product.ImagePath3;
-        product.ImagePath4 = imagepath4 || product.ImagePath4;
-        product.ImagePath5 = imagepath5 || product.ImagePath5;
+        product.ImagePath1 = getImagePath(imagepath1, imagefile1) || product.ImagePath1;
+        product.ImagePath2 = getImagePath(imagepath2, imagefile2) || product.ImagePath2;
+        product.ImagePath3 = getImagePath(imagepath3, imagefile3) || product.ImagePath3;
+        product.ImagePath4 = getImagePath(imagepath4, imagefile4) || product.ImagePath4;
+        product.ImagePath5 = getImagePath(imagepath5, imagefile5) || product.ImagePath5;
     } else {
         const newProduct = {
             Id: products.length ? Math.max(...products.map(p => p.Id)) + 1 : 1,
@@ -70,11 +112,11 @@ function addProduct() {
             Description2: description2,
             relatedproducts: relatedproducts,
             Price: Number(price),
-            ImagePath1: imagepath1,
-            ImagePath2: imagepath2,
-            ImagePath3: imagepath3,
-            ImagePath4: imagepath4,
-            ImagePath5: imagepath5,
+            ImagePath1: getImagePath(imagepath1, imagefile1),
+            ImagePath2: getImagePath(imagepath2, imagefile2) || null,
+            ImagePath3: getImagePath(imagepath3, imagefile3) || null,
+            ImagePath4: getImagePath(imagepath4, imagefile4) || null,
+            ImagePath5: getImagePath(imagepath5, imagefile5) || null,
             ZoneAreas: null,
             Category: null
         };
@@ -82,6 +124,7 @@ function addProduct() {
         products.push(newProduct);
     }
 
+    await updateFile(products);
     displayProducts();
     document.getElementById('productForm').reset();
     editMode = false;
@@ -93,22 +136,6 @@ function addProduct() {
     document.getElementById('preview3').src = '';
     document.getElementById('preview4').src = '';
     document.getElementById('preview5').src = '';
-
-    // Save products to JSON file
-    saveProducts();
-}
-
-function getImagePath(fileInputId, urlInputId) {
-    const fileInput = document.getElementById(fileInputId);
-    const urlInput = document.getElementById(urlInputId);
-
-    if (fileInput.files && fileInput.files[0]) {
-        return URL.createObjectURL(fileInput.files[0]);
-    } else if (urlInput.value) {
-        return urlInput.value;
-    } else {
-        return null;
-    }
 }
 
 function displayProducts() {
@@ -121,7 +148,6 @@ function displayProducts() {
         row.insertCell(1).textContent = product.Name;
         row.insertCell(2).textContent = product.Description;
 
-        // Format description2
         const description2Cell = row.insertCell(3);
         description2Cell.innerHTML = product.Description2.map(d => `<span>${d.phrase}</span>`).join(', ');
 
@@ -177,9 +203,30 @@ function editProduct(id) {
 function deleteProduct(id) {
     products = products.filter(product => product.Id !== id);
     displayProducts();
+    saveProducts(); // Ensure products are saved after deletion
 }
 
-function saveProducts() {
-    // Simulate saving to the JSON file
-    console.log('Products saved:', products);
+async function saveProducts() {
+    try {
+        await updateFile(products);
+        console.log('Products saved:', products);
+    } catch (error) {
+        console.error('Error saving products:', error);
+    }
+}
+
+function previewImage(inputId, previewId) {
+    const input = document.getElementById(inputId);
+    const preview = document.getElementById(previewId);
+    const file = input.files[0];
+
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            preview.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    } else {
+        preview.src = '';
+    }
 }
