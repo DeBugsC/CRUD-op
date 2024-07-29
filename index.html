@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product CRUD</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Product CRUD</h1>
+        <form id="productForm">
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="name" required><br>
+
+            <label for="description">Description:</label>
+            <textarea id="description" name="description"></textarea><br>
+
+            <label for="description2">Description2:</label>
+            <textarea id="description2" name="description2"></textarea><br>
+
+            <label for="relatedproducts">Related Products (comma-separated):</label>
+            <input type="text" id="relatedproducts" name="relatedproducts"><br>
+
+            <label for="price">Price:</label>
+            <input type="number" id="price" name="price" required><br>
+
+            <div class="image-input">
+                <label for="imagepath1">Image Path 1:</label>
+                <input type="file" id="imagepath1" name="imagepath1" accept="image/*" onchange="previewImage('imagepath1', 'preview1')">
+                <input type="text" id="imageurl1" name="imageurl1" placeholder="Or enter image URL">
+                <img id="preview1" width="50"><br>
+            </div>
+
+            <div class="image-input">
+                <label for="imagepath2">Image Path 2:</label>
+                <input type="file" id="imagepath2" name="imagepath2" accept="image/*" onchange="previewImage('imagepath2', 'preview2')">
+                <input type="text" id="imageurl2" name="imageurl2" placeholder="Or enter image URL">
+                <img id="preview2" width="50"><br>
+            </div>
+
+            <div class="image-input">
+                <label for="imagepath3">Image Path 3:</label>
+                <input type="file" id="imagepath3" name="imagepath3" accept="image/*" onchange="previewImage('imagepath3', 'preview3')">
+                <input type="text" id="imageurl3" name="imageurl3" placeholder="Or enter image URL">
+                <img id="preview3" width="50"><br>
+            </div>
+
+            <div class="image-input">
+                <label for="imagepath4">Image Path 4:</label>
+                <input type="file" id="imagepath4" name="imagepath4" accept="image/*" onchange="previewImage('imagepath4', 'preview4')">
+                <input type="text" id="imageurl4" name="imageurl4" placeholder="Or enter image URL">
+                <img id="preview4" width="50"><br>
+            </div>
+
+            <div class="image-input">
+                <label for="imagepath5">Image Path 5:</label>
+                <input type="file" id="imagepath5" name="imagepath5" accept="image/*" onchange="previewImage('imagepath5', 'preview5')">
+                <input type="text" id="imageurl5" name="imageurl5" placeholder="Or enter image URL">
+                <img id="preview5" width="50"><br>
+            </div>
+
+            <button type="button" onclick="addProduct()">Add Product</button>
+        </form>
+
+        <table id="productTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Description2</th>
+                    <th>Related Products</th>
+                    <th>Price</th>
+                    <th>Image Path 1</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Rows will be added here -->
+            </tbody>
+        </table>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
