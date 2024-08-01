@@ -1,4 +1,5 @@
-const token = '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'; // Replace with your actual token
+//const token = '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'; // Replace with your actual token
+const token = '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'; // Replace with your actual token
 const repoOwner = 'AbdlrhmnAtallh'; // Owner of the repo containing the JSON file
 const repoName = 'FirstWebsiteTemplate'; // Repo containing the JSON file
 const filePath = 'products.json'; // Path to your JSON file in the repo
