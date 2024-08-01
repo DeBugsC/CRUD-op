@@ -1,4 +1,4 @@
-const token = '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'; // Replace with your actual token
+const token = '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'; // Replace with your actual token
 const repoOwner = 'AbdlrhmnAtallh'; // Owner of the repo containing the JSON file
 const repoName = 'FirstWebsiteTemplate'; // Repo containing the JSON file
 const filePath = 'products.json'; // Path to your JSON file in the repo
@@ -6,6 +6,7 @@ const filePath = 'products.json'; // Path to your JSON file in the repo
 let products = [];
 let editMode = false;
 let editId = null;
+let changedItems = [];
 
 document.addEventListener('DOMContentLoaded', () => {
     loadProducts();
@@ -21,10 +22,11 @@ async function fetchFile() {
     });
     const data = await response.json();
     const content = atob(data.content);
-    return JSON.parse(content);
+    const utf8Decoder = new TextDecoder('utf-8');
+    return JSON.parse(utf8Decoder.decode(new Uint8Array([...content].map(char => char.charCodeAt(0)))));
 }
 
-async function updateFile(content) {
+async function updateFile(changedItems) {
     const url = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`;
     const response = await fetch(url, {
         headers: {
@@ -35,6 +37,15 @@ async function updateFile(content) {
     const data = await response.json();
     const sha = data.sha;
 
+    const updatedProducts = products.map(product => {
+        const changedItem = changedItems.find(item => item.Id === product.Id);
+        return changedItem ? changedItem : product;
+    });
+
+    const utf8Encode = new TextEncoder();
+    const utf8Array = utf8Encode.encode(JSON.stringify(updatedProducts));
+    const base64Content = btoa(String.fromCharCode(...utf8Array));
+
     await fetch(url, {
         method: 'PUT',
         headers: {
@@ -43,7 +54,7 @@ async function updateFile(content) {
         },
         body: JSON.stringify({
             message: 'Updating JSON file',
-            content: btoa(JSON.stringify(content)),
+            content: base64Content,
             sha: sha
         })
     });
@@ -93,23 +104,30 @@ async function addProduct() {
     };
 
     if (editMode) {
-        const product = products.find(p => p.Id === editId);
-        product.Name = name;
-        product.Description = description;
-        product.Description2 = description2;
-        product.relatedproducts = relatedproducts;
-        product.Price = Number(price);
-        product.ImagePath1 = getImagePath(imagepath1, imagefile1) || product.ImagePath1;
-        product.ImagePath2 = getImagePath(imagepath2, imagefile2) || product.ImagePath2;
-        product.ImagePath3 = getImagePath(imagepath3, imagefile3) || product.ImagePath3;
-        product.ImagePath4 = getImagePath(imagepath4, imagefile4) || product.ImagePath4;
-        product.ImagePath5 = getImagePath(imagepath5, imagefile5) || product.ImagePath5;
+        const productIndex = products.findIndex(p => p.Id === editId);
+        if (productIndex !== -1) {
+            const updatedProduct = {
+                ...products[productIndex],
+                Name: name,
+                Description: description,
+                Description2: description2.map(desc => ({ phrase: desc.phrase })),
+                relatedproducts: relatedproducts,
+                Price: Number(price),
+                ImagePath1: getImagePath(imagepath1, imagefile1) || products[productIndex].ImagePath1,
+                ImagePath2: getImagePath(imagepath2, imagefile2) || products[productIndex].ImagePath2,
+                ImagePath3: getImagePath(imagepath3, imagefile3) || products[productIndex].ImagePath3,
+                ImagePath4: getImagePath(imagepath4, imagefile4) || products[productIndex].ImagePath4,
+                ImagePath5: getImagePath(imagepath5, imagefile5) || products[productIndex].ImagePath5
+            };
+            products[productIndex] = updatedProduct;
+            changedItems.push(updatedProduct);
+        }
     } else {
         const newProduct = {
             Id: products.length ? Math.max(...products.map(p => p.Id)) + 1 : 1,
             Name: name,
             Description: description,
-            Description2: description2,
+            Description2: description2.map(desc => ({ phrase: desc.phrase })),
             relatedproducts: relatedproducts,
             Price: Number(price),
             ImagePath1: getImagePath(imagepath1, imagefile1),
@@ -122,9 +140,10 @@ async function addProduct() {
         };
 
         products.push(newProduct);
+        changedItems.push(newProduct);
     }
 
-    await updateFile(products);
+    await updateFile(changedItems);
     displayProducts();
     document.getElementById('productForm').reset();
     editMode = false;
@@ -138,43 +157,69 @@ async function addProduct() {
     document.getElementById('preview5').src = '';
 }
 
+//#region table 
 function displayProducts() {
-    const tableBody = document.getElementById('productTable').getElementsByTagName('tbody')[0];
-    tableBody.innerHTML = '';
+    const container = document.getElementById('productTableContainer');
+    container.innerHTML = ''; // Clear any existing table
 
+    const table = document.createElement('table');
+    table.className = 'table table-hover table-bordered';
+    table.id = 'productTable';
+
+    const thead = document.createElement('thead');
+    thead.className = 'thead-dark';
+    thead.innerHTML = `
+        <tr>
+            <th>ID</th>
+            <th>الاسم</th>
+            <th>الوصف الاساسي</th>
+            <th>الوصف في اسطر</th>
+            <th>منتجات ذات صلة</th>
+            <th>السعر</th>
+            <th>الصورة الاساسيه</th>
+            <th></th>
+        </tr>
+    `;
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
     products.forEach(product => {
-        const row = tableBody.insertRow();
-        row.insertCell(0).textContent = product.Id;
-        row.insertCell(1).textContent = product.Name;
-        row.insertCell(2).textContent = product.Description;
+        const row = document.createElement('tr');
+        
+        // Set the row as a clickable link
+        row.style.cursor = 'pointer';
+        row.onclick = () => editProduct(product.Id);
+          
 
-        const description2Cell = row.insertCell(3);
-        description2Cell.innerHTML = product.Description2.map(d => `<span>${d.phrase}</span>`).join(', ');
-
-        row.insertCell(4).textContent = product.relatedproducts.join(', ');
-        row.insertCell(5).textContent = product.Price;
-
-        const imgCell = row.insertCell(6);
-        const img = document.createElement('img');
-        img.src = product.ImagePath1;
-        img.alt = product.Name;
-        img.width = 50;
-        imgCell.appendChild(img);
-
-        const actionsCell = row.insertCell(7);
-        actionsCell.className = 'actions';
-
-        const editButton = document.createElement('button');
-        editButton.textContent = 'Edit';
-        editButton.onclick = () => editProduct(product.Id);
-        actionsCell.appendChild(editButton);
-
-        const deleteButton = document.createElement('button');
-        deleteButton.textContent = 'Delete';
-        deleteButton.onclick = () => deleteProduct(product.Id);
-        actionsCell.appendChild(deleteButton);
+        row.innerHTML = `
+            <td>${product.Id}</td>
+            <td>${product.Name}</td>
+            <td>${truncateText(product.Description, 50)}</td>
+            <td>${product.Description2.map(d => `<span>${d.phrase}</span>`).join(', ')}</td>
+            <td>${product.relatedproducts.join(', ')}</td>
+            <td>${product.Price}</td>
+            <td><img src="${product.ImagePath1}" alt="${product.Name}" width="50"></td>
+            <td class="actions">
+                <button class="btn btn-danger btn-sm" onclick="deleteProduct(${product.Id}); event.stopPropagation();">Delete</button>
+            </td>
+        `;
+        tbody.appendChild(row);
     });
+
+    table.appendChild(tbody);
+    container.appendChild(table);
 }
+
+// Helper function to truncate text to a specified length
+function truncateText(text, maxLength) {
+    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+}
+
+// Initial call to display products when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+    displayProducts();
+});
+//#endregion
 
 function editProduct(id) {
     const product = products.find(p => p.Id === id);
@@ -185,48 +230,26 @@ function editProduct(id) {
 
     document.getElementById('name').value = product.Name;
     document.getElementById('description').value = product.Description;
-    document.getElementById('description2').value = product.Description2.map(d => d.phrase).join(', ');
-    document.getElementById('relatedproducts').value = product.relatedproducts.join(',');
+    document.getElementById('description2').value = product.Description2.map(desc => desc.phrase).join(', ');
+    document.getElementById('relatedproducts').value = product.relatedproducts.join(', ');
     document.getElementById('price').value = product.Price;
 
-    editMode = true;
-    editId = id;
-
-    // Show existing image previews
     document.getElementById('preview1').src = product.ImagePath1 || '';
     document.getElementById('preview2').src = product.ImagePath2 || '';
     document.getElementById('preview3').src = product.ImagePath3 || '';
     document.getElementById('preview4').src = product.ImagePath4 || '';
     document.getElementById('preview5').src = product.ImagePath5 || '';
+
+    // Set edit mode and editId to indicate that we're editing this product
+    editMode = true;
+    editId = id;
 }
 
 function deleteProduct(id) {
-    products = products.filter(product => product.Id !== id);
-    displayProducts();
-    saveProducts(); // Ensure products are saved after deletion
-}
-
-async function saveProducts() {
-    try {
-        await updateFile(products);
-        console.log('Products saved:', products);
-    } catch (error) {
-        console.error('Error saving products:', error);
-    }
-}
-
-function previewImage(inputId, previewId) {
-    const input = document.getElementById(inputId);
-    const preview = document.getElementById(previewId);
-    const file = input.files[0];
-
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            preview.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    } else {
-        preview.src = '';
+    if (confirm('Are you sure you want to delete this product?')) {
+        products = products.filter(product => product.Id !== id);
+        changedItems.push({ Id: id, _deleted: true });
+        updateFile(changedItems);
+        displayProducts();
     }
 }
