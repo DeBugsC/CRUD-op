@@ -1,0 +1,27 @@
+name: Deploy App.js
+
+on:
+  push:
+    branches:
+      - main  # This triggers the workflow on a push to the main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '14'  # Use the Node.js version your project requires
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Run app.js
+      run: node app.js
+      env:
+        GH_TOKEN: ${{ secrets.GH_TOKEN }}  # This uses the secret you added earlier
